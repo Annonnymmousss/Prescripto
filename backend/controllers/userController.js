@@ -3,6 +3,7 @@ import bycrypt from 'bcrypt'
 import userModel from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
 import {v2 as cloudinary} from 'cloudinary'
+import appointmentModel from '../models/appointmentModel.js'
 
 const registerUser = async(req,res) =>{
     try {
@@ -101,6 +102,51 @@ const updateProfile = async(req,res) => {
         return res.json({success:false , message:error}) 
     }
 }
+
+const bookAppointment = async(req,res) => {
+    try {
+        const {userId , docId , slotDate , slotTime} = req.body 
+        const docData = await appointmentModel.findById(docId).select("-password")
+        if(!docData.available){
+            return res.json({success:false , message:"Doctor not available"})
+        }
+        const slots_booked = docData.slots_booked
+        if(slots_booked[slotDate]){
+            if(slots_booked[slotDate].include(slotTime)){
+                return res.json({success:false , message:"slot not available"})
+            }else{
+                slots_booked[slotDate].push(slotTime)
+            }
+        }else{
+            slots_booked[slotDate] = []
+            slots_booked[slotDate].push(slotTime)
+        }
+        const userData = await appointmentModel.findById(userId).select('-password')
+        delete docData.slots_booked
+
+        const appointmentData = {
+            userId,
+            docId,
+            userData,
+            docData,
+            amount:docData.fees,
+            slotDate,
+            slotTime,
+            date:Date.now(),
+        }
+
+        const newAppointment = new appointmentModel(appointmentData)
+        await newAppointment.save()
+
+        await docData.findByIdAndUpdate(docId , {slots_booked})
+
+        res.json({success:true , message:'appointment booked'})
+    }
+    catch{
+         console.log(error)
+        return res.json({success:false , message:error}) 
+    }
+}
 export{
-    registerUser , loginUser , getProfile , updateProfile
+    registerUser , loginUser , getProfile , updateProfile , bookAppointment
 }
