@@ -4,11 +4,10 @@ import userModel from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
 import {v2 as cloudinary} from 'cloudinary'
 import appointmentModel from '../models/appointmentModel.js'
+import doctorModel from '../models/doctorModel.js'
 
 const registerUser = async(req,res) =>{
     try {
-        
-
         const {name , email , password} = req.body
         if(!name||!password||!email){
             return res.json({success:false , message:"Missing Details"})
@@ -105,14 +104,15 @@ const updateProfile = async(req,res) => {
 
 const bookAppointment = async(req,res) => {
     try {
-        const {userId , docId , slotDate , slotTime} = req.body 
-        const docData = await appointmentModel.findById(docId).select("-password")
+        const {docId , slotDate , slotTime} = req.body
+        const userId = req.userId
+        const docData = await doctorModel.findById(docId).select("-password")
         if(!docData.available){
             return res.json({success:false , message:"Doctor not available"})
         }
         const slots_booked = docData.slots_booked
         if(slots_booked[slotDate]){
-            if(slots_booked[slotDate].include(slotTime)){
+            if(slots_booked[slotDate].includes(slotTime)){
                 return res.json({success:false , message:"slot not available"})
             }else{
                 slots_booked[slotDate].push(slotTime)
@@ -121,7 +121,7 @@ const bookAppointment = async(req,res) => {
             slots_booked[slotDate] = []
             slots_booked[slotDate].push(slotTime)
         }
-        const userData = await appointmentModel.findById(userId).select('-password')
+        const userData = await userModel.findById(userId).select('-password')
         delete docData.slots_booked
 
         const appointmentData = {
@@ -138,12 +138,12 @@ const bookAppointment = async(req,res) => {
         const newAppointment = new appointmentModel(appointmentData)
         await newAppointment.save()
 
-        await docData.findByIdAndUpdate(docId , {slots_booked})
+        await doctorModel.findByIdAndUpdate(docId , {slots_booked})
 
         res.json({success:true , message:'appointment booked'})
     }
-    catch{
-         console.log(error)
+    catch(error){
+        console.log(error)
         return res.json({success:false , message:error}) 
     }
 }
