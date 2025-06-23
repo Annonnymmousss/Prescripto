@@ -148,14 +148,15 @@ const bookAppointment = async(req,res) => {
     }
 }
 
+// Replace your existing listAppointment function with this:
 const listAppointment = async(req,res) => {
     try {
-        const {userId} = req.body
-        const appointments = await appointmentModel.findById({userId})
+        const userId = req.userId       
+        const appointments = await appointmentModel.find({userId})        
         res.json({success: true , appointments})
     } catch (error) {
-        console.log(error)
-        return res.json({success:false , message:error})
+        console.log(error.message)
+        return res.json({success:false , message: error.message})
     }
 }
 export{
