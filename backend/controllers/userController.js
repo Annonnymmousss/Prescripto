@@ -208,6 +208,22 @@ const paymentRazorpay = async(req,res)=>{
         return res.json({success:false , message: error.message})
     }
 }
+
+const verifyRazorpay = async(req,res)=>{
+    try {
+        const {razorpay_order_id} = req.body
+        const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id)
+        if(orderInfo.status==="paid"){
+            await appointmentModel.findByIdAndUpdate(orderInfo.receipt,{payment:true})
+            res.json({success:true , message:"Payment Successful"})
+        }else{
+            res.json({success:false , message:"Payment Failed"})
+        }
+    } catch (error) {
+        console.log(error.message)
+        return res.json({success:false , message: error.message}) 
+    }
+}
 export{
-    registerUser , loginUser , getProfile , updateProfile , bookAppointment , listAppointment , cancelAppointment , paymentRazorpay
+    registerUser , loginUser , getProfile , updateProfile , bookAppointment , listAppointment , cancelAppointment , paymentRazorpay , verifyRazorpay
 }
